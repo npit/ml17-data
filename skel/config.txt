@@ -1,0 +1,14 @@
+# data paths. Format expected is rootPath/lang1/textfile1, rootPath/lang1/textfile2, ... rootPath/langN/textfileN
+# human_texts can have an extra layer of IDs: rootPath/ID1/lang1/textfile1 .... rootPath/IDN/langN/textfileN
+machine_texts=
+human_texts=
+replacement_texts=
+
+# folder to write to
+output_folder=
+
+# sentence splitter models 
+sentenceSplitter_model_paths=
+
+# random seed
+seed=

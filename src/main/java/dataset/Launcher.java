@@ -2,6 +2,7 @@ package dataset;
 
 import io.MultilingFileReader;
 import io.Textfile;
+import io.TextfileCollection;
 import scramble.Scrambler;
 
 import java.io.*;
@@ -34,10 +35,11 @@ public class Launcher {
         // read all docs
         reader.read();
 
-        Set<Textfile> Textfiles = reader.getTextfiles();
+        TextfileCollection TFColl= reader.getTextfileCollection();
         // scramble new  data
         Scrambler scrambler = new Scrambler(props);
-        scrambler.scramble(Textfiles);
+       scrambler.setTextfileColl(TFColl);
+        scrambler.run();
 
     }
 }

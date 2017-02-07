@@ -1,4 +1,4 @@
-package scramble;
+package io.sentsplit;
 
 /**
  * Created by nik on 2/4/17.
@@ -8,6 +8,9 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import opennlp.tools.sentdetect.SentenceDetectorME;
@@ -18,7 +21,7 @@ import opennlp.tools.sentdetect.SentenceModel;
  *
  * @author George K. <gkiom@scify.org>`
  */
-public class OpenNLPSentenceSplitter{
+public class OpenNLPSentenceSplitter implements ISentenceSplitter{
 
     private String sModelFilePath = null;
 
@@ -39,15 +42,23 @@ public class OpenNLPSentenceSplitter{
         this.sentenceDetector = new SentenceDetectorME(smSplitter);
     }
 
-    
-    public String[] splitToSentences(String sDocument) {
+    @Override
+    public List<String> splitToSentences(String sDocument, String locale)
+    {
         if (smSplitter == null) {
             throw new IllegalArgumentException("no model found");
         }
         String[] saSentences;
         saSentences = sentenceDetector.sentDetect(sDocument.trim());
-        return saSentences;
+        return Arrays.asList(saSentences);
     }
+
+    @Override
+    public void checkLocaleAvailable(String lang) {
+
+    }
+
+
 
     /**
      * Initializes the sentence splitter model for a specific language.

@@ -4,6 +4,9 @@ import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Map;
+import java.util.SortedSet;
+import java.util.TreeSet;
 
 /**
  * Created by nik on 2/3/17.
@@ -48,6 +51,33 @@ public class Utils {
     {
         if(! path.endsWith(File.separator)) path+=File.separator;
         return path;
+    }
+    public static void write(String file, String text) throws IOException {
+        BufferedWriter bw = new BufferedWriter(new FileWriter(file));
+        bw.write(text);
+        bw.close();
+    }
+    public static String associationToString(Map<Integer,Integer> map)
+    {
+        String out = "";
+        SortedSet<Integer> keys = new TreeSet<Integer>(map.keySet());
+        for(Integer key : keys)
+        {
+            out += key.toString() + " " + map.get(key).toString() + "\n";
+        }
+        return out;
+    }
+    public static String replAssociationToString(Map<Integer,Map<Integer,Integer>> map)
+    {
+        String out = "";
+        SortedSet<Integer> keys = new TreeSet<Integer>(map.keySet());
+        for(Integer key : keys)
+        {
+            for(Integer rkey : map.get(key).keySet()) {
+                out += key.toString() + " " + rkey + " " + map.get(key).get(rkey).toString() + "\n";
+            }
+        }
+        return out;
     }
 
 }

@@ -1,10 +1,14 @@
 package io;
 
+import io.sentsplit.BasicSentenceSplitter;
+import io.sentsplit.ISentenceSplitter;
+import io.sentsplit.OpenNLPSentenceSplitter;
+
 import java.io.File;
 import java.io.IOException;
-import java.util.HashSet;
-import java.util.Properties;
-import java.util.Set;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.*;
 
 import static io.Utils.toFolderPath;
 
@@ -21,26 +25,39 @@ public class MultilingFileReader {
     String machinesFolder;
     String replFolder;
     Set<String> Languages;
+    ISentenceSplitter SentenceSplitter;
 
-    public Set<Textfile> getTextfiles() {
-        return Textfiles;
+    public TextfileCollection getTextfileCollection() {
+        return TextfileColl;
     }
 
-    Set<Textfile> Textfiles;
+    TextfileCollection TextfileColl;
 
     public MultilingFileReader(Properties props)
     {
-        Textfiles = new HashSet<>();
+        TextfileColl =new TextfileCollection();
         Languages = new HashSet<>();
         humansFolder = props.getProperty("human_texts","");
         machinesFolder = props.getProperty("machine_texts","");
         replFolder = props.getProperty("replacement_texts","");
 
+        String splitMode = props.getProperty("split_mode","");
+        if( splitMode.equals("opennlp"))
+            SentenceSplitter = new OpenNLPSentenceSplitter(props.getProperty("sentenceSplitter_model_paths"));
+        else if (splitMode.equals("basic"))
+            SentenceSplitter = new BasicSentenceSplitter();
+        else
+        {
+            SentenceSplitter = null;
+            System.err.println("Undefined split_mode : [" +  splitMode + "]");
+        }
     }
 
     // Read data from all assigned paths
     public void read()
     {
+        if(SentenceSplitter == null) return ;
+
         System.out.println("Parsing humans' data...");
         // for peers, read per peer ID
         for(final String id : new File(humansFolder).list())
@@ -50,18 +67,21 @@ public class MultilingFileReader {
                 System.out.println("Skipping non-directory:" + foldername);
                 continue;
             }
-            readFolder(foldername);
+            readFolder(foldername,TextfileColl.INPUT);
         }
         System.out.println("Parsing machines' data...");
-        readFolder(machinesFolder);
+        readFolder(machinesFolder,TextfileColl.INPUT);
         System.out.println("Parsing source data...");
-        readFolder(replFolder);
+        readFolder(replFolder, TextfileColl.REPL);
+
+        System.out.println("Done reading.");
     }
 
     // Read data from a folder. Format expected is
     // basedir/language1/text1,text2,...
-    void readFolder(final String rootFolder)
+    void readFolder(final String rootFolder, final String label)
     {
+        ArrayList<Textfile> textfiles = new ArrayList<>();
         if(rootFolder.isEmpty()){
             System.out.println("Empty root folder.");
             return;
@@ -88,14 +108,19 @@ public class MultilingFileReader {
                 try {
                     // get file text
                     String fileContent = Utils.readFileToString(textFilePath);
-                    Textfiles.add(new Textfile(fileContent, lang));
+                    List<String> sentences = SentenceSplitter.splitToSentences(fileContent,lang);
+
+                    Textfile tf = new Textfile(fileContent, lang);
+                    tf.setSentences(sentences);
+                    textfiles.add(tf);
+                    TextfileColl.AllLanguages.add(lang);
                 } catch (IOException e) {
                     System.err.printf("Error reading file %s\n",textfile);
                 }
             }
-
         }
-
+        Path p = Paths.get(rootFolder);
+        TextfileColl.addInputTextfileList(textfiles,label);
     }
 
 }

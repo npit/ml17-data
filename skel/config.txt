@@ -10,5 +10,22 @@ output_folder=
 # sentence splitter models 
 sentenceSplitter_model_paths=
 
+# how to split text to sentences: basic / opennlp
+split_mode=basic
+
 # random seed
-seed=
+random_seed=
+
+# pcnt fo articles for each method. Order is SO,SR,ME,ALL
+# comma-delimited
+method_percent=
+# use this to not reuse input files for multiple methods (=> method_percent has to sum upto 100)
+disjoint_method_sets=n
+
+# probabilities for SO, SR
+method_decision_prob=
+
+
+# method-specific settings
+# first or second half is replaced
+merge_keep_which_half=

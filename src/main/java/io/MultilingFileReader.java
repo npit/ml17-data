@@ -69,6 +69,7 @@ public class MultilingFileReader {
         System.out.println("\nParsing replacement data...");
         readFolder(replFolder, TextfileColl.REPL);
 
+        System.err.flush();
         System.out.println("\nDone reading.");
     }
 

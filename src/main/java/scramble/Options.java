@@ -10,9 +10,18 @@ import java.util.Properties;
  */
 class Options
 {
-    static final String ME = "ME";
-    static final String SR = "SR";
-    static final String SO = "SO";
+    static boolean checkRunOrder(String [] runs)
+    {
+        for(String s : runs)
+        {
+            if(methods.contains(s)) continue;
+            System.err.println("Unspecified method : " + s); System.err.flush();
+            return false;
+        }
+        return true;
+
+    }
+
     Properties Props;
     String MethodName;
     boolean Verbosity;
@@ -20,6 +29,28 @@ class Options
     int DecisionProb;
     int Percentage;
     String miscValues[];
+
+    enum methods
+    {
+        ME("ME",2),SR("SR",1),SO("SO",0);
+        methods(String name,int idx)
+        {
+            this.idx=idx;
+            this.name = name;
+        }
+        public static boolean contains(String name)
+        {
+            for(methods m : methods.values())
+            {
+                if(m.name.equals(name)) return true;
+            }
+            return false;
+        }
+        @Override
+        public String toString(){return name;}
+        String name;
+        int idx;
+    }
     enum modifiers
     {
         KEEPF(0),KEEPS(1),REUSE_A(2),REUSE_S(3);
@@ -44,13 +75,13 @@ class Options
     void tell()
     {
         System.out.println( "Name  : " + MethodName);
-        System.out.println(fields_str[fields.PCNT.idx] + " : " + DecisionProb);
-        System.out.println(fields_str[fields.PROB.idx] + " : " + Percentage);
-        if(MethodName.equals(this.SO)) return;
+        System.out.println(fields_str[fields.PCNT.idx] + " : " + Percentage);
+        System.out.println(fields_str[fields.PROB.idx] + " : " + DecisionProb);
+        if(MethodName.equals(methods.SO.toString())) return;
 
         System.out.println(modifiers_str[modifiers.REUSE_A.idx] + ":" + hasMisc(modifiers_str[modifiers.REUSE_A.idx]));
         System.out.println(modifiers_str[modifiers.REUSE_S.idx] + ":" + hasMisc(modifiers_str[modifiers.REUSE_S.idx]));
-        if(MethodName.equals(this.SR)) return;
+        if(MethodName.equals(methods.SR.toString())) return;
 
         System.out.println(modifiers_str[modifiers.KEEPF.idx] + " : " + hasMisc(modifiers_str[modifiers.KEEPF.idx]));
     }
@@ -69,12 +100,17 @@ class Options
                 DecisionProb =  Integer.parseInt(content);
                 checkProb(DecisionProb);
             }
-            else if (raw_field.equals("pcnt")) Percentage = Integer.parseInt(content);
+            else if (raw_field.equals("pcnt"))
+            {
+                Percentage = Integer.parseInt(content);
+                checkProb(Percentage);
+            }
             else System.err.println("Ignoring undefined field: " + field + " for method " + MethodName);
         }
         catch(Exception ex)
         {
-            System.err.println("Exception while trying to read " + content + " to field " + field);
+            System.err.println("Exception while trying to read " + content + " to field " + field + " , setting default.");
+            System.err.flush();
             setDefault(field);
         }
     }
@@ -104,11 +140,11 @@ class Options
         return res;
     }
 
-    public Options(Properties props, String MethodName)
+    public Options(Properties props, methods MethodName)
     {
 
         this.Props = props;
-        this.MethodName = MethodName;
+        this.MethodName = MethodName.toString();
         String modifiers = Props.getProperty("modifiers");
         Verbosity = Utils.csvStringContains(modifiers,"verbose");
         if(Verbosity) System.out.println("Initializing method options for " + MethodName);

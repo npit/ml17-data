@@ -24,6 +24,7 @@ public class Randomizer {
             System.err.println("Did not provide a random_seed field.");
             seed = Calendar.getInstance().getTimeInMillis();
             System.err.println("Using clock:" + Long.toString(seed));
+            System.err.flush();
         }
         R = new Random(seed);
     }

@@ -16,9 +16,15 @@ public class BasicSentenceSplitter implements ISentenceSplitter{
         AvailableLocales = new HashSet<>();
 
         String localeSetting = props.getProperty("locale");
-        if(localeSetting == null) localeSetting="EN,us";
+        if(localeSetting == null || localeSetting.isEmpty())
+        {
+            localeSetting="EN,us";
+            System.err.println("Locale option was not specified, using default: " + localeSetting);
+            System.err.flush();
 
-        String [] locParts = localeSetting.split(",");
+        }
+
+        String [] locParts = localeSetting.split("_");
         Locale outputLocale;
         if(locParts.length > 1) outputLocale = new Locale(locParts[0],locParts[1]);
         else outputLocale = new Locale(locParts[0]);
@@ -31,7 +37,7 @@ public class BasicSentenceSplitter implements ISentenceSplitter{
             {
                 continue;
             }
-            localeDescription = loc.getDisplayLanguage(outputLocale);
+            localeDescription = loc.getDisplayLanguage(outputLocale).toLowerCase(outputLocale);
             AvailableLocales.add(localeDescription);
         }
     }

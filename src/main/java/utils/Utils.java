@@ -89,6 +89,11 @@ public class Utils {
         if(csvstr == null) return false;
         if(csvstr.isEmpty()) return false;
         String [] arr = csvstr.split(",");
+        for(int i=0;i<arr.length;++i)
+        {
+            String ss = arr[i].trim();
+            arr[i] = ss;
+        }
         return Arrays.asList(arr).contains(what);
     }
 

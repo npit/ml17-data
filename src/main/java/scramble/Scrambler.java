@@ -3,6 +3,7 @@ package scramble;
 
 import io.Textfile;
 import io.TextfileCollection;
+import net.didion.jwnl.data.Verb;
 import utils.Pair;
 import utils.Utils;
 
@@ -35,6 +36,7 @@ public class Scrambler {
 
     }
 
+    int NumRunsPerMethod[];
     TextfileCollection TextfileColl;
     boolean Verbosity;
     public Scrambler(Properties props)
@@ -53,13 +55,19 @@ public class Scrambler {
 
     public void run()
     {
+
         // read options per method
-        optsSR = new Options(Props,Options.SR);
-        optsSO = new Options(Props,Options.SO);
-        optsME = new Options(Props,Options.ME);
+        optsSR = new Options(Props,Options.methods.SR);
+        optsSO = new Options(Props,Options.methods.SO);
+        optsME = new Options(Props,Options.methods.ME);
+        System.out.println();
+        optsSO.tell(); System.out.println();
+        optsSR.tell(); System.out.println();
+        optsME.tell(); System.out.println();
 
         // get shuffled input file indices
         InputTexts = TextfileColl.getAllFilesInCategory(TextfileColl.INPUT);
+        System.out.println("Will process " + InputTexts.size() + " input files.");
         int numInputFiles = InputTexts.size();
         Collections.shuffle(InputTexts,Rand.getR());
 
@@ -76,37 +84,75 @@ public class Scrambler {
                 e.printStackTrace();
             }
         }
-
         // run each method cyclically
         Pair<Integer,Integer> idxs;
-        int numSO = (int) Math.ceil((float) (optsSR.Percentage * numInputFiles) / 100.0f);;
-        int numSR = (int) Math.ceil((float) (optsSR.Percentage * numInputFiles) / 100.0f);;
-        int numME = (int) Math.ceil((float) (optsME.Percentage * numInputFiles) / 100.0f);;
+        int [] numFilesPerMethod = new int[Options.methods.values().length];
+        NumRunsPerMethod = new int[Options.methods.values().length];
+        for(int i=0;i<NumRunsPerMethod.length;++i) NumRunsPerMethod[i]=0;
 
-        int numDesired = numSO;
-        while(true) {
-            idxs = decideIndices(numDesired);
-            doSO(idxs.first());
-            numDesired = idxs.second();
-            if(numDesired == 0) break;
+        numFilesPerMethod[Options.methods.SR.idx] = (int) Math.ceil((float) (optsSR.Percentage * numInputFiles) / 100.0f);;
+        numFilesPerMethod[Options.methods.SO.idx] = (int) Math.ceil((float) (optsSO.Percentage * numInputFiles) / 100.0f);;
+        numFilesPerMethod[Options.methods.ME.idx] = (int) Math.ceil((float) (optsME.Percentage * numInputFiles) / 100.0f);;
+
+
+        String content = Props.getProperty("run_order","SO,SR,ME");
+        String runOrder[] = content.split(",");
+        if(! Options.checkRunOrder(runOrder))
+        {
+            System.err.println("Run order configuration error, aborting.");
+            return;
         }
-        numDesired = numSR;
-        while(true) {
-            idxs = decideIndices(numDesired);
-            doSR(idxs.first());
-            numDesired = idxs.second();
-            if(numDesired == 0) break;
+        System.out.println("Will run methods in the order of :" + Arrays.asList(runOrder).toString());
+        for(String method : runOrder)
+        {
+            int numLocalRuns=0;
+            int numDesired = numFilesPerMethod[Options.methods.valueOf(method).idx];
+
+            while(true) {
+                idxs = decideIndices(numDesired);
+                if(idxs.second()>0 || numLocalRuns > 0)
+                    System.out.print(">Running " + method + " requires wrap around. Pass #" + ++numLocalRuns + " : ");
+                System.out.println(method + " (" + idxs.first() + " articles)");
+                if (method.equals(Options.methods.SO.toString())) {
+                    doSO(idxs.first());
+                } else if (method.equals(Options.methods.SR.toString())) {
+                    doSR(idxs.first());
+                } else {
+                    doME(idxs.first());
+                }
+                numDesired = idxs.second();
+                if(numDesired == 0) break;
+            }
+            // method run done
+            NumRunsPerMethod[Options.methods.valueOf(method).idx]++;
+
         }
-        numDesired = numME;
-        while(true) {
-            idxs = decideIndices(numDesired);
-            doME(idxs.first());
-            numDesired = idxs.second();
-            if(numDesired == 0) break;
-        }
+
+//        int numDesired = numSO;
+//        while(true) {
+//            idxs = decideIndices(numDesired);
+//            doSO(idxs.first());
+//            numDesired = idxs.second();
+//            if(numDesired == 0) break;
+//        }
+//        numDesired = numSR;
+//        while(true) {
+//            idxs = decideIndices(numDesired);
+//            doSR(idxs.first());
+//            numDesired = idxs.second();
+//            if(numDesired == 0) break;
+//        }
+//        numDesired = numME;
+//        while(true) {
+//            idxs = decideIndices(numDesired);
+//            doME(idxs.first());
+//            numDesired = idxs.second();
+//            if(numDesired == 0) break;
+//        }
 
 
     }
+
     Pair<Integer,Integer> decideIndices(int amountDesired)
     {
         // if the number of files desired exceeds the total, do all remaining, reshuffle and
@@ -134,25 +180,28 @@ public class Scrambler {
     // rearrange sentence order in a file
     public void doSO(int num)
     {
-        System.out.print("Applying SO ");
-        System.out.println("to " + num + " articles.");
-        optsSO.tell();
+
         ArrayList<Pair<Integer,Integer>> swapLog = new ArrayList<>();
 
         // write folder
         String outputFolder = Props.getProperty("output_folder","output");
-        outputFolder = Utils.toFolderPath(outputFolder + "SO");
+        outputFolder += "SO";
+        if(NumRunsPerMethod[Options.methods.SO.idx] > 0)
+            outputFolder+=Integer.toString(1+NumRunsPerMethod[Options.methods.SO.idx]);
+        outputFolder = Utils.toFolderPath(outputFolder);
+
         File outputFolderFile = new File(outputFolder);
 
         // index to path mapping
 
-        for(int tfidx=CurrentProcessedIndex;tfidx<num;++tfidx)
+        for(int tfidx=CurrentProcessedIndex;tfidx<CurrentProcessedIndex+num;++tfidx)
         {
             swapLog.clear();
 
             Textfile tf = InputTexts.get(tfidx);
             String lang = tf.getLanguage();
-
+            if(Verbosity)
+                System.out.printf("Textfile %d/%d lang %s\n",tfidx,num,lang);
             int numSentences = tf.getSentences().size();
             for(int k=0;k<numSentences;++k) swapLog.add(new Pair<>());
             String [] outSentences = new String[numSentences ];
@@ -162,9 +211,11 @@ public class Scrambler {
 
             for(int sidx=0;sidx<tf.getSentences().size();++sidx)
             {
+                if(Verbosity)
+                    System.out.printf("\tSentence %d / %d  : ",sidx, outSentences.length);
                 if(outSentences[sidx] != null) {
                     if(Verbosity)
-                        System.out.printf("Already swapped sentence %d/%d \n", 1 + sidx, outSentences.length);
+                        System.out.printf("already swapped\n");
                     continue;
                 }
 
@@ -194,7 +245,7 @@ public class Scrambler {
                     swapLog.get(sidx).set(1+sidx,1+sidx);
                 }
                 if(Verbosity)
-                    System.out.printf("Swapping sentence %d/%d with %d\n",1+sidx,outSentences.length,1+targetIndex);
+                    System.out.printf("swapping with %d\n",1+targetIndex);
                 outSentences[sidx] = tf.getSentences().get(targetIndex);
             }
             Textfile outTextfile = new Textfile(lang, Arrays.asList(outSentences));
@@ -219,17 +270,13 @@ public class Scrambler {
             }
         }
         CurrentProcessedIndex += num;
-        System.out.println("done.\n");
+
     }
 
 
 
     public void doSR(int num)
     {
-        System.out.print("Applying SR ");
-        System.out.println("to " + num + " articles.");
-
-        optsSR.tell();
         // apply SR
 
         // check replacement articles exist
@@ -244,7 +291,10 @@ public class Scrambler {
 
         // write folder
         String outputFolder = Props.getProperty("output_folder","output");
-        outputFolder = Utils.toFolderPath(outputFolder + "SR");
+        outputFolder+="SR";
+        if(NumRunsPerMethod[Options.methods.SO.idx] > 0)
+            outputFolder+=Integer.toString(1+NumRunsPerMethod[Options.methods.SR.idx]);
+        outputFolder = Utils.toFolderPath(outputFolder);
         File outputFolderFile = new File(outputFolder);
 
 
@@ -252,16 +302,20 @@ public class Scrambler {
         boolean noMoreSentences = false;
         for(int tfidx=CurrentProcessedIndex;tfidx<CurrentProcessedIndex + num;++tfidx)
         {
+            swapLog.clear();
             Textfile tf = InputTexts.get(tfidx);
             String lang = tf.getLanguage();
-
+            if(Verbosity)
+                System.out.printf("Textfile %d/%d lang %s\n",tfidx,num,lang);
             String [] outSentences = new String[tf.getSentences().size()];
             int count = 0;
             for(int sidx=0;sidx<tf.getSentences().size();++sidx)
             {
                 ++count;
+
                 if(Verbosity)
-                    System.out.printf("Textfile %d/%d sentence %d / %d lang %s\n",tfidx,num,sidx, outSentences.length,lang);
+                    System.out.printf("\tSentence %d/%d ",1+sidx,outSentences.length);
+
                 // decide if the sentence is to be replaced
                 if(noMoreSentences == false && Rand.coinToss(optsSR.DecisionProb) )
                 {
@@ -289,11 +343,12 @@ public class Scrambler {
                         ex.printStackTrace();
                     }
                     if(Verbosity)
-                        System.out.printf("Swapping sentence %d/%d with %d - %d\n",1+sidx,outSentences.length,1+replIndex, 1+sentIndex);
+                        System.out.printf("Swapping with %d - %d\n",1+replIndex, 1+sentIndex);
                 }
                 else
                 {
                     // no swap, prob check failed
+                    if(Verbosity) System.out.println("No swap.");
                     swapLog.add(new Pair<>("none",-1));
                     outSentences[sidx] = tf.getSentences().get(sidx);
                 }
@@ -321,30 +376,32 @@ public class Scrambler {
             }
         }
         CurrentProcessedIndex += num;
-        System.out.println("done.\n");
+
+
     }
 
     // huehue
     public void doME(int num)
     {
-        System.out.print("Applying ME ");
-        System.out.println("to " + num + " articles.");
 
-        optsME.tell();
         Pair<String,String> swapLog = new Pair<>();
 
         // write folder
         String outputFolder = Props.getProperty("output_folder","output");
-        outputFolder = Utils.toFolderPath(outputFolder + "ME");
+        outputFolder+="ME";
+        if(NumRunsPerMethod[Options.methods.ME.idx] > 0)
+            outputFolder+=Integer.toString(1+NumRunsPerMethod[Options.methods.ME.idx]);
+        outputFolder = Utils.toFolderPath(outputFolder);
         File outputFolderFile = new File(outputFolder);
 
-        for(int tfidx=CurrentProcessedIndex;tfidx<num;++tfidx)
+        for(int tfidx=CurrentProcessedIndex;tfidx<CurrentProcessedIndex+num;++tfidx)
         {
             Textfile tf = InputTexts.get(tfidx);
 
             String lang = tf.getLanguage();
             Textfile outTextfile = null;
-
+            if(Verbosity)
+                System.out.printf("Textfile %d/%d lang %s ",tfidx,num,lang);
             if(Rand.coinToss(optsME.DecisionProb))
             {
                 // do the merge
@@ -378,7 +435,7 @@ public class Scrambler {
                 swapLog.set(other.getFilePath(),KeepFirstHalf ? "second" : "first");
 
                 if(Verbosity)
-                    System.out.printf("Merging %d/%d with %d, half : %s\n",1+tfidx,num,artIdx, KeepFirstHalf ? "second" : "first");
+                    System.out.printf("Merging  %d, half : %s\n",artIdx, KeepFirstHalf ? "second" : "first");
                 outTextfile = new Textfile(lang,outSentences);
             }
             else
@@ -412,7 +469,6 @@ public class Scrambler {
         }
         CurrentProcessedIndex += num;
 
-        System.out.println("done.\n");
 
     }
 

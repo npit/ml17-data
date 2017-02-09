@@ -19,8 +19,8 @@ random_seed=
 
 # locale
 # Use the java8 locale specifier (lang | lang,region) to determine the
-# language of the language folders your files are in.
-locale=el
+# language of your system's locale. Language names in the input folders should be in that language
+locale=
 
 # global modifiers
 # available: verbose, write_debug
@@ -50,3 +50,9 @@ ME_prob=
 ME_pcnt=
 ME_modifiers=
 
+# specify which methods will run and in what order.
+# method executions can be repeated, but all will use the same above configuration
+# for example, run_order=SO,SR,ME,ME,SO,SO,SR
+# Each method run after than the first, will be stored in a <methodName><runIndex> folder
+# for the above example, output method folders will be SO,SR,ME,ME2,SO2,SO3,SR2
+run_order=

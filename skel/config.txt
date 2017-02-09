@@ -15,6 +15,11 @@ split_mode=basic
 # random seed
 random_seed=
 
+# locale
+# Use the java8 locale specifier (lang | lang,region) to determine the
+# language of the language folders your files are in.
+locale=el
+
 # global modifiers
 # available: verbose, write_debug
 modifiers=
@@ -40,3 +45,4 @@ SR_modifiers=
 ME_prob=
 ME_pcnt=
 ME_modifiers=
+

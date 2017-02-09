@@ -236,6 +236,7 @@ public class Scrambler {
         if(TextfileColl.getAllFilesInCategory(TextfileColl.REPL).isEmpty())
         {
             System.err.println("\nNo files in replacement category, cannot run SR.");
+            System.err.flush();
             return;
         }
 

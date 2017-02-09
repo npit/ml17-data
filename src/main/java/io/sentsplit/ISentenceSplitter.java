@@ -9,5 +9,5 @@ import java.util.Set;
 public interface ISentenceSplitter {
 
     List<String> splitToSentences(String text, String locale);
-    void checkLocaleAvailable(String lang);
+    boolean checkLocaleAvailable(String lang);
 }

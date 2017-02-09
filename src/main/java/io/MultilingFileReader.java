@@ -49,7 +49,7 @@ public class MultilingFileReader {
         if( splitMode.equals("opennlp"))
             SentenceSplitter = new OpenNLPSentenceSplitter(props.getProperty("sentenceSplitter_model_paths"));
         else if (splitMode.equals("basic"))
-            SentenceSplitter = new BasicSentenceSplitter();
+            SentenceSplitter = new BasicSentenceSplitter(props);
         else
         {
             SentenceSplitter = null;
@@ -62,14 +62,14 @@ public class MultilingFileReader {
     {
         if(SentenceSplitter == null) return ;
 
-        System.out.println("Parsing input data...");
+        System.out.println("\nParsing input data...");
         for(String inputFolder : inputFolders)
             readFolder(inputFolder,TextfileColl.INPUT);
 
-        System.out.println("Parsing replacement data...");
+        System.out.println("\nParsing replacement data...");
         readFolder(replFolder, TextfileColl.REPL);
 
-        System.out.println("Done reading.");
+        System.out.println("\nDone reading.");
     }
 
     // Read data from a folder. Format expected is
@@ -109,6 +109,13 @@ public class MultilingFileReader {
                     // get file text
                     String fileContent = Utils.readFileToString(textFilePath);
                     List<String> sentences = SentenceSplitter.splitToSentences(fileContent,lang);
+                    if(sentences == null)
+                    {
+                        System.err.println("\tFailed to read file " + textFilePath);
+                        System.err.println("\tAborting language folder read : " + langFolder);
+                        System.err.flush();
+                        break;
+                    }
 
                     Textfile tf = new Textfile(fileContent, lang);
                     tf.setSentences(sentences);

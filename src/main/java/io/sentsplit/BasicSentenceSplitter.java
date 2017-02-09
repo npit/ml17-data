@@ -10,10 +10,20 @@ import java.util.*;
 public class BasicSentenceSplitter implements ISentenceSplitter{
     private Map<String,BreakIterator> BreakIterators;
     Set<String> AvailableLocales;
-    public BasicSentenceSplitter()
+    public BasicSentenceSplitter(Properties props)
     {
         BreakIterators = new HashMap<>();
         AvailableLocales = new HashSet<>();
+
+        String localeSetting = props.getProperty("locale");
+        if(localeSetting == null) localeSetting="EN,us";
+
+        String [] locParts = localeSetting.split(",");
+        Locale outputLocale;
+        if(locParts.length > 1) outputLocale = new Locale(locParts[0],locParts[1]);
+        else outputLocale = new Locale(locParts[0]);
+
+
         for(Locale loc : DateFormat.getAvailableLocales())
         {
             String localeDescription = loc.getDisplayLanguage().toLowerCase();
@@ -21,6 +31,7 @@ public class BasicSentenceSplitter implements ISentenceSplitter{
             {
                 continue;
             }
+            localeDescription = loc.getDisplayLanguage(outputLocale);
             AvailableLocales.add(localeDescription);
         }
     }
@@ -29,7 +40,7 @@ public class BasicSentenceSplitter implements ISentenceSplitter{
     public List<String>  splitToSentences(String text, String locale)
     {
         ArrayList<String> result = new ArrayList<>();
-        checkLocaleAvailable(locale);
+        if(! checkLocaleAvailable(locale)) return null;
         BreakIterator iterator = BreakIterators.get(locale);
 
         iterator.setText(text);
@@ -44,13 +55,19 @@ public class BasicSentenceSplitter implements ISentenceSplitter{
     }
 
     @Override
-    public void checkLocaleAvailable(String lang) {
+    public boolean checkLocaleAvailable(String lang) {
 
             if(AvailableLocales.contains(lang.toLowerCase()))
             {
                 if( ! BreakIterators.containsKey(lang))
                     BreakIterators.put(lang, BreakIterator.getSentenceInstance(Locale.forLanguageTag(lang)));
             }
+            else
+            {
+                System.err.println("Unable to find locale for language:" + lang);
+                return false;
+            }
+            return true;
         }
 
 

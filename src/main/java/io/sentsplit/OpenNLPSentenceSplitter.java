@@ -54,7 +54,8 @@ public class OpenNLPSentenceSplitter implements ISentenceSplitter{
     }
 
     @Override
-    public void checkLocaleAvailable(String lang) {
+    public boolean checkLocaleAvailable(String lang) {
+        return true;
 
     }
 

@@ -3,10 +3,8 @@ package scramble;
 
 import io.Textfile;
 import io.TextfileCollection;
-import io.Utils;
-import io.sentsplit.BasicSentenceSplitter;
-import io.sentsplit.ISentenceSplitter;
-import io.sentsplit.OpenNLPSentenceSplitter;
+import utils.Pair;
+import utils.Utils;
 
 
 import java.io.File;
@@ -20,11 +18,21 @@ import java.util.*;
  * Created by nik on 2/3/17.
  */
 public class Scrambler {
+
+
+
+    boolean WriteDebugFiles;
+    Options optsSR;
+    Options optsSO;
+    Options optsME;
+    List<Textfile> InputTexts;
     Randomizer Rand;
     Properties Props;
-
+    static final String [] MethodNames = {"SO","SR","ME"};
+    int CurrentProcessedIndex;
     public void setTextfileColl(TextfileCollection textfileColl) {
         TextfileColl = textfileColl;
+
     }
 
     TextfileCollection TextfileColl;
@@ -32,13 +40,12 @@ public class Scrambler {
     public Scrambler(Properties props)
     {
         String modifiers = props.getProperty("modifiers","");
-        if(modifiers != null && Arrays.asList(modifiers.split(",")).contains("verbose"))
-            Verbosity = true;
-        else
-            Verbosity = false;
+        Verbosity = Utils.csvStringContains(modifiers,"verbose");
+        WriteDebugFiles = Utils.csvStringContains(modifiers,"write_debug");
 
         Rand = new Randomizer(props);
         Props = props;
+        CurrentProcessedIndex = 0;
     }
 
 
@@ -46,61 +53,109 @@ public class Scrambler {
 
     public void run()
     {
-        // size percentages
-        String [] pcnt = Props.getProperty("method_percent").split(",");
-        String [] thresh = Props.getProperty("method_decision_prob").split(",");
-        ArrayList<Integer> size_percentages = new ArrayList<>();
-        ArrayList<Integer> decision_thresholds = new ArrayList<>();
-        int runningSum=0;
-        for(String s : pcnt)
-        {
-            size_percentages.add(Integer.parseInt(s));
-            runningSum += size_percentages.get(size_percentages.size()-1);
-        }
-        for(String s : thresh)
-        {
-            decision_thresholds.add(Integer.parseInt(s));
-            if (size_percentages.get(size_percentages.size()-1)>100 || size_percentages.get(size_percentages.size()-1) < 0)
-            {
-                System.err.println("Gotta provide deision threshold probability between 0 and 100.");
-                System.err.println("Provided: " + decision_thresholds);
-                return;
+        // read options per method
+        optsSR = new Options(Props,Options.SR);
+        optsSO = new Options(Props,Options.SO);
+        optsME = new Options(Props,Options.ME);
+
+        // get shuffled input file indices
+        InputTexts = TextfileColl.getAllFilesInCategory(TextfileColl.INPUT);
+        int numInputFiles = InputTexts.size();
+        Collections.shuffle(InputTexts,Rand.getR());
+
+        if(WriteDebugFiles) {
+            // write index to path associations
+            Map<Integer, String> IndexToPath = new HashMap<>();
+            for (int t = 0; t < InputTexts.size(); ++t)
+                IndexToPath.put(t, InputTexts.get(t).getFilePath());
+
+            String outputFolder = Props.getProperty("output_folder", "output");
+            try {
+                Utils.writeMap(outputFolder + "indexMapping.txt", IndexToPath);
+            } catch (IOException e) {
+                e.printStackTrace();
             }
         }
-        if (runningSum != 100)
-        {
-            System.err.println("Gotta provide percentages adding up to 100.");
-            System.err.println("Provided: " + size_percentages);
-            return;
+
+        // run each method cyclically
+        Pair<Integer,Integer> idxs;
+        int numSO = (int) Math.ceil((float) (optsSR.Percentage * numInputFiles) / 100.0f);;
+        int numSR = (int) Math.ceil((float) (optsSR.Percentage * numInputFiles) / 100.0f);;
+        int numME = (int) Math.ceil((float) (optsME.Percentage * numInputFiles) / 100.0f);;
+
+        int numDesired = numSO;
+        while(true) {
+            idxs = decideIndices(numDesired);
+            doSO(idxs.first());
+            numDesired = idxs.second();
+            if(numDesired == 0) break;
+        }
+        numDesired = numSR;
+        while(true) {
+            idxs = decideIndices(numDesired);
+            doSR(idxs.first());
+            numDesired = idxs.second();
+            if(numDesired == 0) break;
+        }
+        numDesired = numME;
+        while(true) {
+            idxs = decideIndices(numDesired);
+            doME(idxs.first());
+            numDesired = idxs.second();
+            if(numDesired == 0) break;
         }
 
-        doSO(size_percentages, decision_thresholds);
-        doSR(size_percentages, decision_thresholds);
-        doME(size_percentages, decision_thresholds);
+
+    }
+    Pair<Integer,Integer> decideIndices(int amountDesired)
+    {
+        // if the number of files desired exceeds the total, do all remaining, reshuffle and
+        // start over
+        // first value of the pair
+        int numToProcessNextRun = amountDesired;
+        int numAvailableArticlesLeft = 0;
+        int numArticlesTotal = TextfileColl.getAllFilesInCategory(TextfileColl.INPUT).size();
+        int amountLeft = numArticlesTotal - CurrentProcessedIndex;
+        // if exactly zero left, just start over
+        if( amountLeft == 0)
+        {
+            amountLeft = numArticlesTotal;
+            CurrentProcessedIndex = 0;
+        }
+
+        if( amountLeft < amountDesired)
+        {
+            numToProcessNextRun = amountLeft;
+            numAvailableArticlesLeft = amountDesired - amountLeft;
+        }
+        return new Pair<>(numToProcessNextRun,numAvailableArticlesLeft);
 
     }
     // rearrange sentence order in a file
-    public void doSO(ArrayList<Integer> percentages, ArrayList<Integer> thresholds)
+    public void doSO(int num)
     {
-        System.out.print("Applying SO...");
-        // apply SO
-        List<Textfile> inputTexts = TextfileColl.getAllFilesInCategory(TextfileColl.INPUT);
-
-        int num = percentages.get(0) * inputTexts.size() / 100;
-        ArrayList<Map<Integer,Integer>> SOSwaps = new ArrayList<>();
+        System.out.print("Applying SO ");
+        System.out.println("to " + num + " articles.");
+        optsSO.tell();
+        ArrayList<Pair<Integer,Integer>> swapLog = new ArrayList<>();
 
         // write folder
         String outputFolder = Props.getProperty("output_folder","output");
         outputFolder = Utils.toFolderPath(outputFolder + "SO");
         File outputFolderFile = new File(outputFolder);
 
-        for(int tfidx=TextfileColl.CurrentProcessedIndex;tfidx<num;++tfidx)
+        // index to path mapping
+
+        for(int tfidx=CurrentProcessedIndex;tfidx<num;++tfidx)
         {
-            SOSwaps.add(new HashMap<>());
-            Textfile tf = new Textfile(inputTexts.get(tfidx));
+            swapLog.clear();
+
+            Textfile tf = InputTexts.get(tfidx);
             String lang = tf.getLanguage();
 
-            String [] outSentences = new String[tf.getSentences().size()];
+            int numSentences = tf.getSentences().size();
+            for(int k=0;k<numSentences;++k) swapLog.add(new Pair<>());
+            String [] outSentences = new String[numSentences ];
             // sentences from which to pick ones
             List<Integer>  sentenceSwapPool = new ArrayList<>();
             for(int j=0;j<tf.getSentences().size();++j) sentenceSwapPool.add(j);
@@ -118,21 +173,25 @@ public class Scrambler {
                 // to remove it now rather that in the case of true if-check below
                 sentenceSwapPool.remove(sentenceSwapPool.indexOf(sidx));
                 // decide if it's going to be reordered
-                if(Rand.coinToss(thresholds.get(0)) &&
+                if(Rand.coinToss(optsSO.DecisionProb) &&
                         outSentences [sidx] == null &&
                         sentenceSwapPool.size() >0)
                 {
 
-                    // pick with which to swap
-                    Collections.shuffle(sentenceSwapPool, Rand.getR());
-                    targetIndex = sentenceSwapPool.get(0);
-                    sentenceSwapPool.remove(sentenceSwapPool.indexOf(targetIndex));
+                    // pick with which to swap. Pick a position in the pool
+                    int randIndex = Rand.getInt(sentenceSwapPool.size());
+                    targetIndex = sentenceSwapPool.get(randIndex); // sentence chosen
+                    sentenceSwapPool.remove(randIndex);
 
-
-                    SOSwaps.get(SOSwaps.size() -1).put(sidx,targetIndex);
-                    SOSwaps.get(SOSwaps.size() -1).put(targetIndex,sidx);
+                    swapLog.get(sidx).set(1+sidx,1+targetIndex);
+                    swapLog.get(targetIndex).set(1+targetIndex,1+sidx);
 
                     outSentences[targetIndex] = tf.getSentences().get(sidx);
+                }
+                else
+                {
+                    // did not swap.
+                    swapLog.get(sidx).set(1+sidx,1+sidx);
                 }
                 if(Verbosity)
                     System.out.printf("Swapping sentence %d/%d with %d\n",1+sidx,outSentences.length,1+targetIndex);
@@ -151,57 +210,78 @@ public class Scrambler {
                 }
                 String fileBaseWritePath = Utils.toFolderPath(outputFolder + lang);
                 Utils.write(fileBaseWritePath + tfidx + ".txt",outTextfile.getText());
-                Utils.write(fileBaseWritePath + tfidx + ".orig.txt",tf.getText());
-                Utils.write(fileBaseWritePath + tfidx + ".assoc",Utils.associationToString(SOSwaps.get(tfidx)));
+                if(WriteDebugFiles) {
+                    Utils.write(fileBaseWritePath + tfidx + ".orig.txt", tf.getText());
+                    Utils.write(fileBaseWritePath + tfidx + ".assoc", Utils.listToString(swapLog));
+                }
             } catch (IOException e) {
                 e.printStackTrace();
             }
         }
-        TextfileColl.CurrentProcessedIndex += num;
-        System.out.println("done.");
+        CurrentProcessedIndex += num;
+        System.out.println("done.\n");
     }
 
 
 
-    public void doSR(ArrayList<Integer> percentages, ArrayList<Integer> thresholds)
+    public void doSR(int num)
     {
-        System.out.print("Applying SR...");
-        // apply SO
+        System.out.print("Applying SR ");
+        System.out.println("to " + num + " articles.");
 
-        List<Textfile> inputTexts = TextfileColl.getAllFilesInCategory(TextfileColl.INPUT);
-        int num = percentages.get(2) * inputTexts.size() / 100;
-        ArrayList<Map<Integer,Map<Integer,Integer>>> SRSwaps = new ArrayList<>();
+        optsSR.tell();
+        // apply SR
+
+        // check replacement articles exist
+        if(TextfileColl.getAllFilesInCategory(TextfileColl.REPL).isEmpty())
+        {
+            System.err.println("\nNo files in replacement category, cannot run SR.");
+            return;
+        }
+
+        ArrayList<Pair<String,Integer>> swapLog = new ArrayList<>();
 
         // write folder
         String outputFolder = Props.getProperty("output_folder","output");
         outputFolder = Utils.toFolderPath(outputFolder + "SR");
         File outputFolderFile = new File(outputFolder);
 
-        for(int tfidx=TextfileColl.CurrentProcessedIndex;tfidx<TextfileColl.CurrentProcessedIndex + num;++tfidx)
+
+
+        boolean noMoreSentences = false;
+        for(int tfidx=CurrentProcessedIndex;tfidx<CurrentProcessedIndex + num;++tfidx)
         {
-            SRSwaps.add(new HashMap<>());
-            Textfile tf = new Textfile(inputTexts.get(tfidx));
+            Textfile tf = InputTexts.get(tfidx);
             String lang = tf.getLanguage();
 
             String [] outSentences = new String[tf.getSentences().size()];
-            // sentences from which to pick ones
-
+            int count = 0;
             for(int sidx=0;sidx<tf.getSentences().size();++sidx)
             {
+                ++count;
                 if(Verbosity)
                     System.out.printf("Textfile %d/%d sentence %d / %d lang %s\n",tfidx,num,sidx, outSentences.length,lang);
-                // decide if it's going to be reordered
-                if(Rand.coinToss(thresholds.get(1)) )
+                // decide if the sentence is to be replaced
+                if(noMoreSentences == false && Rand.coinToss(optsSR.DecisionProb) )
                 {
                     // pick with which article to swap
-                    int replIndex = TextfileColl.getRandomArticle(TextfileColl.REPL,lang,Rand.getR());
-                    int sentIndex = TextfileColl.getRandomSentence(TextfileColl.REPL,lang,replIndex,Rand.getR());
+                    int replIndex = TextfileColl.getRandomArticle(TextfileColl.REPL,lang,Rand.getR(),optsSR.hasMisc(Options.modifiers.REUSE_A));
+                    int sentIndex = TextfileColl.getRandomSentence(TextfileColl.REPL,lang,replIndex,Rand.getR(),optsSR.hasMisc(Options.modifiers.REUSE_S));
+                    if(replIndex < 0 || sentIndex < 0)
+                    {
+                        System.err.printf("No (more?) replacement resources. Stopping at article %d/%d (%d) \n",count,num,tfidx);
+                        System.err.println("articleInfo : " + tf.toString());
 
-                    SRSwaps.get(SRSwaps.size() -1).put(sidx,new HashMap<>());
-                    SRSwaps.get(SRSwaps.size() -1).get(sidx).put(replIndex, sentIndex);
-
+                        noMoreSentences = true;
+                        //swapLog.add(new Pair<>("none",-1));
+                        outSentences[sidx] = tf.getSentences().get(sidx);
+                        break;
+                    }
+                    // do the swap
                     try {
-                        outSentences[sidx] = TextfileColl.getInputFiles().get(TextfileColl.REPL).get(lang).get(replIndex).getSentences().get(sentIndex);
+                        Textfile other = TextfileColl.getInputFiles().get(TextfileColl.REPL).get(lang).get(replIndex);
+                        outSentences[sidx] = other.getSentences().get(sentIndex);
+                        swapLog.add(new Pair<>(other.getFilePath(),1+sentIndex));
                     }
                     catch (IndexOutOfBoundsException ex)
                     {
@@ -212,8 +292,8 @@ public class Scrambler {
                 }
                 else
                 {
-                    SRSwaps.get(SRSwaps.size() -1).put(sidx,new HashMap<>());
-                    SRSwaps.get(SRSwaps.size() -1).get(sidx).put(-1,-1);
+                    // no swap, prob check failed
+                    swapLog.add(new Pair<>("none",-1));
                     outSentences[sidx] = tf.getSentences().get(sidx);
                 }
             }
@@ -231,47 +311,48 @@ public class Scrambler {
                 }
                 String fileBaseWritePath = Utils.toFolderPath(outputFolder + lang);
                 Utils.write(fileBaseWritePath + tfidx + ".txt",outTextfile.getText());
-                Utils.write(fileBaseWritePath + tfidx + ".orig.txt",tf.getText());
-                Utils.write(fileBaseWritePath + tfidx + ".assoc",Utils.replAssociationToString(SRSwaps.get(tfidx - TextfileColl.CurrentProcessedIndex)));
+                if(WriteDebugFiles) {
+                    Utils.write(fileBaseWritePath + tfidx + ".orig.txt", tf.getText());
+                    Utils.write(fileBaseWritePath + tfidx + ".assoc", Utils.listToString(swapLog));
+                }
             } catch (IOException e) {
                 e.printStackTrace();
             }
         }
-        TextfileColl.CurrentProcessedIndex += num;
-        System.out.println("done.");
+        CurrentProcessedIndex += num;
+        System.out.println("done.\n");
     }
 
-    public void doME(ArrayList<Integer> percentages, ArrayList<Integer> thresholds) // heehehehe
+    // huehue
+    public void doME(int num)
     {
-        System.out.print("Applying ME...");
-        // apply SO
-        List<Textfile> inputTexts = TextfileColl.getAllFilesInCategory(TextfileColl.INPUT);
+        System.out.print("Applying ME ");
+        System.out.println("to " + num + " articles.");
 
-        int num =  TextfileColl.CurrentProcessedIndex + percentages.get(3) * inputTexts.size() / 100;
-        if (num>inputTexts.size()) num = inputTexts.size();
-        ArrayList<Map<Integer,Integer>> MESwaps = new ArrayList<>();
+        optsME.tell();
+        Pair<String,String> swapLog = new Pair<>();
 
         // write folder
         String outputFolder = Props.getProperty("output_folder","output");
         outputFolder = Utils.toFolderPath(outputFolder + "ME");
         File outputFolderFile = new File(outputFolder);
 
-        for(int tfidx=TextfileColl.CurrentProcessedIndex;tfidx<num;++tfidx)
+        for(int tfidx=CurrentProcessedIndex;tfidx<num;++tfidx)
         {
-            Textfile tf = new Textfile(inputTexts.get(tfidx));
+            Textfile tf = InputTexts.get(tfidx);
+
             String lang = tf.getLanguage();
             Textfile outTextfile = null;
-            MESwaps.add(new HashMap<>());
 
-            if(Rand.coinToss(thresholds.get(3)))
+            if(Rand.coinToss(optsME.DecisionProb))
             {
                 // do the merge
                 ArrayList<String>  outSentences = new ArrayList<>();
                 ArrayList<String>  keptSentences = new ArrayList<>();
 
                 // decide which half to keep
-                boolean KeepFirstHalf = Props.getProperty("merge_keep_which_half","first").equals("first");
-                if(KeepFirstHalf)
+                boolean KeepFirstHalf = optsME.hasMisc("keep_first");
+                if( ! KeepFirstHalf)
                 {
                     for(int s = tf.getSentences().size() / 2; s < tf.getSentences().size(); ++s) keptSentences.add(tf.getSentences().get(s));
                 }
@@ -279,23 +360,24 @@ public class Scrambler {
                     for(int s=0; s < tf.getSentences().size() / 2;++s) keptSentences.add(tf.getSentences().get(s));
 
                 // select a random article
-                int artIdx = TextfileColl.getRandomArticle(TextfileColl.INPUT,lang,Rand.getR());
+                int artIdx = TextfileColl.getRandomArticle(TextfileColl.INPUT,lang,Rand.getR(),optsME.hasMisc(Options.modifiers.REUSE_A));
                 Textfile other = TextfileColl.getInputFiles().get(TextfileColl.INPUT).get(lang).get(artIdx);
 
                 if(KeepFirstHalf)
                 {
-                    for(int s = other.getSentences().size() / 2; s < tf.getSentences().size(); ++s) keptSentences.add(tf.getSentences().get(s));
+                    // take second half from other article
+                    for(int s = other.getSentences().size() / 2; s < other.getSentences().size(); ++s) keptSentences.add(other.getSentences().get(s));
                 }
                 else {
                     for (int s = 0; s < other.getSentences().size() / 2; ++s)
-                        outSentences.add(tf.getSentences().get(s));
+                        outSentences.add(other.getSentences().get(s));
                 }
                 outSentences.addAll(keptSentences);
 
-                MESwaps.get(MESwaps.size()-1).put(artIdx,KeepFirstHalf ? 1:0);
+                swapLog.set(other.getFilePath(),KeepFirstHalf ? "second" : "first");
 
                 if(Verbosity)
-                    System.out.printf("Merging %d/%d with %d, half : ",tfidx,num,artIdx, KeepFirstHalf?1:0);
+                    System.out.printf("Merging %d/%d with %d, half : %s\n",1+tfidx,num,artIdx, KeepFirstHalf ? "second" : "first");
                 outTextfile = new Textfile(lang,outSentences);
             }
             else
@@ -303,7 +385,7 @@ public class Scrambler {
                 outTextfile = tf;
                 if(Verbosity)
                     System.out.printf("Will not merge %d/%d \n",tfidx,num);
-                MESwaps.get(MESwaps.size()-1).put(-1,-1);
+                swapLog.set("none","no-merge");
 
             }
             TextfileColl.addOutputTextfile(outTextfile);
@@ -318,14 +400,18 @@ public class Scrambler {
                 }
                 String fileBaseWritePath = Utils.toFolderPath(outputFolder + lang);
                 Utils.write(fileBaseWritePath + tfidx + ".txt",outTextfile.getText());
-                Utils.write(fileBaseWritePath + tfidx + ".orig.txt",tf.getText());
-                Utils.write(fileBaseWritePath + tfidx + ".assoc",Utils.associationToString(MESwaps.get(MESwaps.size()-1)));
+                if(WriteDebugFiles) {
+                    Utils.write(fileBaseWritePath + tfidx + ".orig.txt", tf.getText());
+                    Utils.write(fileBaseWritePath + tfidx + ".assoc", swapLog.toString());
+                }
+
             } catch (IOException e) {
                 e.printStackTrace();
             }
         }
-        TextfileColl.CurrentProcessedIndex += num;
-        System.out.println("done.");
+        CurrentProcessedIndex += num;
+
+        System.out.println("done.\n");
 
     }
 

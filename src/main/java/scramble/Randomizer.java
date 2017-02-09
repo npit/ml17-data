@@ -1,5 +1,6 @@
 package scramble;
 
+import java.util.Calendar;
 import java.util.Properties;
 import java.util.Random;
 
@@ -14,12 +15,25 @@ public class Randomizer {
     Random R;
     public Randomizer(Properties props)
     {
-        long seed = Long.parseLong(props.getProperty("random_seed","35916589713248"));
+        long seed;
+        try {
+            seed = Long.parseLong(props.getProperty("random_seed"));
+        }
+        catch (NumberFormatException ex)
+        {
+            System.err.println("Did not provide a random_seed field.");
+            seed = Calendar.getInstance().getTimeInMillis();
+            System.err.println("Using clock:" + Long.toString(seed));
+        }
         R = new Random(seed);
     }
     int getProb()
     {
         return R.nextInt(100);
+    }
+    int getInt(int lessThan)
+    {
+        return R.nextInt(lessThan);
     }
     public boolean coinToss(int probPcnt)
     {

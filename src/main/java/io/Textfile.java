@@ -1,16 +1,23 @@
 package io;
 
-import javax.xml.soap.Text;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 
 /**
  * Created by nik on 2/4/17.
  */
 public class Textfile {
     String Text;
+
+    public void setFilePath(String filePath) {
+        FilePath = filePath;
+    }
+
+    public String getFilePath() {
+        return FilePath;
+    }
+
+    String FilePath;
 
     public void setSentences(List<String> sentences) {
         Sentences = sentences;
@@ -53,5 +60,14 @@ public class Textfile {
         }
         Language = lang;
         Sentences = sents;
+    }
+    @Override
+    public String toString()
+    {
+        String res="";
+        res += "[" + getLanguage() + "]\n";
+        res +="[" + getFilePath() + "]\n";
+        res+="[" + getText() +"]";
+        return res;
     }
 }

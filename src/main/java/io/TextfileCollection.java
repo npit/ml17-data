@@ -15,10 +15,13 @@ public class TextfileCollection {
         IdxNameToLangToFiles = new HashMap<>();
         OutputTextfileLists = new ArrayList<>();
         AllLanguages = new HashSet<>();
+
     }
     public ArrayList<Textfile> getAllFilesInCategory( String cat)
     {
         ArrayList<Textfile> res = new ArrayList<>();
+        if(! InputFiles.containsKey(cat)) return res;
+
         for(String lang : InputFiles.get(cat).keySet())
         {
             res.addAll(InputFiles.get(cat).get(lang));
@@ -28,7 +31,7 @@ public class TextfileCollection {
     // text file roles
     public static final String INPUT="input";
     public static final String REPL="repl";
-    public int CurrentProcessedIndex=0;
+
 
     Set<String> AllLanguages;
     public Set<String> getAllLanguages() {
@@ -81,54 +84,48 @@ public class TextfileCollection {
 
 
 
-    public Map<String, Map<String, Map<Integer, List<Integer>>>> getGlobalIndex() {
-        return IdxNameToLangToFilesToSentences;
-    }
-
     // index lists for randomized selections
     // type - lang - fileidxs
     Map<String,Map<String,ArrayList<Integer>>> IdxNameToLangToFiles;
     Map<String,Map<String,Map<Integer,List<Integer>>>> IdxNameToLangToFilesToSentences;
 
-    public Map<String, Map<String, ArrayList<Integer>>> getIdxNameToLangToFiles() {
-        return IdxNameToLangToFiles;
-    }
 
-    public Map<String, Map<String, Map<Integer, List<Integer>>>> getIdxNameToLangToFilesToSentences() {
-        return IdxNameToLangToFilesToSentences;
-    }
-
-    public int getRandomSentence(String name, String lang, int artidx, Random R)
+    public int getRandomSentence(String name, String lang, int artidx, Random R,boolean reuse)
     {
+        if(! IdxNameToLangToFilesToSentences.get(name).containsKey(lang)) return -1;
+
         int num=0;
         int idx=0;
 
         num = R.nextInt(IdxNameToLangToFilesToSentences.get(name).get(lang).get(artidx).size());
         idx = IdxNameToLangToFilesToSentences.get(name).get(lang).get(artidx).get(num);
+        // delete it
+        if(!reuse) {
+            IdxNameToLangToFilesToSentences.get(name).get(lang).get(artidx).remove(num);
 
-//        System.out.printf("Chosen position %d/%d, sentence idx %d\n",num,IdxNameToLangToFilesToSentences.get(name).get(lang).get(artidx).size(),idx);
-        IdxNameToLangToFilesToSentences.get(name).get(lang).get(artidx).remove(num);
-
-        if(IdxNameToLangToFilesToSentences.get(name).get(lang).get(artidx).isEmpty())
-        {
-            IdxNameToLangToFilesToSentences.get(name).get(lang).remove(new Integer(artidx));
-            IdxNameToLangToFiles.get(name).get(lang).remove(new Integer(artidx));
+            if (IdxNameToLangToFilesToSentences.get(name).get(lang).get(artidx).isEmpty()) {
+                IdxNameToLangToFilesToSentences.get(name).get(lang).remove(new Integer(artidx));
+                IdxNameToLangToFiles.get(name).get(lang).remove(new Integer(artidx));
+            }
         }
 
         return idx;
     }
 
-    public int getRandomArticle(String name, String lang, Random R)
+    public int getRandomArticle(String name, String lang, Random R, boolean reuse)
     {
-        if(IdxNameToLangToFiles.get(name).get(lang).isEmpty())
+
+        if(! IdxNameToLangToFiles.get(name).containsKey(lang)) return -1;
+        if(reuse == false && IdxNameToLangToFiles.get(name).get(lang).isEmpty())
         {
             buildIndex(name,lang);
         }
         int indexOfArrlist =  R.nextInt(IdxNameToLangToFiles.get(name).get(lang).size());
         int articleIndex = IdxNameToLangToFiles.get(name).get(lang).get(indexOfArrlist);
-//        System.out.printf("Chosen position %d/%d, article idx %d\n",indexOfArrlist,IdxNameToLangToFiles.get(name).get(lang).size(),articleIndex);
-        if(IdxNameToLangToFiles.get(name).get(lang).isEmpty())
-            IdxNameToLangToFiles.get(name).remove(lang);
+        if(!reuse) {
+            if (IdxNameToLangToFiles.get(name).get(lang).isEmpty())
+                IdxNameToLangToFiles.get(name).remove(lang);
+        }
         return articleIndex;
     }
     private void buildIndex(String name, String lang)

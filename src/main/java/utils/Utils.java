@@ -1,12 +1,9 @@
-package io;
+package utils;
 
 import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.Map;
-import java.util.SortedSet;
-import java.util.TreeSet;
+import java.util.*;
 
 /**
  * Created by nik on 2/3/17.
@@ -57,15 +54,15 @@ public class Utils {
         bw.write(text);
         bw.close();
     }
-    public static String associationToString(Map<Integer,Integer> map)
-    {
-        String out = "";
-        SortedSet<Integer> keys = new TreeSet<Integer>(map.keySet());
-        for(Integer key : keys)
+    public static void writeMap(String filepath, Map<?,?> map) throws IOException {
+
+        BufferedWriter bw = new BufferedWriter(new FileWriter(filepath));
+
+        for(Object key : map.keySet())
         {
-            out += key.toString() + " " + map.get(key).toString() + "\n";
+            bw.write(key.toString() + "\t" + map.get(key).toString() + "\n");
         }
-        return out;
+        bw.close();
     }
     public static String replAssociationToString(Map<Integer,Map<Integer,Integer>> map)
     {
@@ -78,6 +75,21 @@ public class Utils {
             }
         }
         return out;
+    }
+
+    public static String listToString(ArrayList<?> list)
+    {
+        String res = "";
+        for(Object o : list)
+            res +=(o.toString() + "\n");
+        return res;
+    }
+    public static boolean csvStringContains(String csvstr, String what)
+    {
+        if(csvstr == null) return false;
+        if(csvstr.isEmpty()) return false;
+        String [] arr = csvstr.split(",");
+        return Arrays.asList(arr).contains(what);
     }
 
 }

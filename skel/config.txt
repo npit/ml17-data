@@ -1,7 +1,6 @@
 # data paths. Format expected is rootPath/lang1/textfile1, rootPath/lang1/textfile2, ... rootPath/langN/textfileN
-# human_texts can have an extra layer of IDs: rootPath/ID1/lang1/textfile1 .... rootPath/IDN/langN/textfileN
-machine_texts=
-human_texts=
+
+input_texts=
 replacement_texts=
 
 # folder to write to
@@ -16,16 +15,28 @@ split_mode=basic
 # random seed
 random_seed=
 
-# pcnt fo articles for each method. Order is SO,SR,ME,ALL
-# comma-delimited
-method_percent=
-# use this to not reuse input files for multiple methods (=> method_percent has to sum upto 100)
-disjoint_method_sets=n
-
-# probabilities for SO, SR
-method_decision_prob=
+# global modifiers
+# available: verbose, write_debug
+modifiers=
 
 
-# method-specific settings
-# first or second half is replaced
-merge_keep_which_half=
+#
+# Parameters for each method
+# prob : probability of firing
+# pcnt : percentage of files to use on
+# modifiers : misc. modifiers for the method.
+
+# modifiers:
+SO_prob=
+SO_pcnt=
+SO_modifiers=
+
+# modifiers: reuse_art, reuse_sent
+SR_prob=
+SR_pcnt=
+SR_modifiers=
+
+# ME modifiers: keep_first, keep_second, reuse_art, reuse_sent
+ME_prob=
+ME_pcnt=
+ME_modifiers=

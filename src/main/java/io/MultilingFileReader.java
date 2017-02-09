@@ -3,6 +3,7 @@ package io;
 import io.sentsplit.BasicSentenceSplitter;
 import io.sentsplit.ISentenceSplitter;
 import io.sentsplit.OpenNLPSentenceSplitter;
+import utils.Utils;
 
 import java.io.File;
 import java.io.IOException;
@@ -10,7 +11,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
 
-import static io.Utils.toFolderPath;
+import static utils.Utils.toFolderPath;
 
 /**
  * Created by nik on 2/3/17.
@@ -21,11 +22,12 @@ import static io.Utils.toFolderPath;
  * as source articles for Sentence Replacement
  */
 public class MultilingFileReader {
-    String humansFolder;
+    String [] inputFolders;
     String machinesFolder;
     String replFolder;
     Set<String> Languages;
     ISentenceSplitter SentenceSplitter;
+    boolean Verbosity;
 
     public TextfileCollection getTextfileCollection() {
         return TextfileColl;
@@ -35,10 +37,12 @@ public class MultilingFileReader {
 
     public MultilingFileReader(Properties props)
     {
+        Verbosity = Utils.csvStringContains(props.getProperty("modifiers"),"verbose");
         TextfileColl =new TextfileCollection();
         Languages = new HashSet<>();
-        humansFolder = props.getProperty("human_texts","");
-        machinesFolder = props.getProperty("machine_texts","");
+        String content = props.getProperty("input_texts","");
+        inputFolders = content.split(",");
+
         replFolder = props.getProperty("replacement_texts","");
 
         String splitMode = props.getProperty("split_mode","");
@@ -58,20 +62,11 @@ public class MultilingFileReader {
     {
         if(SentenceSplitter == null) return ;
 
-        System.out.println("Parsing humans' data...");
-        // for peers, read per peer ID
-        for(final String id : new File(humansFolder).list())
-        {
-            String foldername = toFolderPath(humansFolder+id);
-            if(! new File(foldername).isDirectory()) {
-                System.out.println("Skipping non-directory:" + foldername);
-                continue;
-            }
-            readFolder(foldername,TextfileColl.INPUT);
-        }
-        System.out.println("Parsing machines' data...");
-        readFolder(machinesFolder,TextfileColl.INPUT);
-        System.out.println("Parsing source data...");
+        System.out.println("Parsing input data...");
+        for(String inputFolder : inputFolders)
+            readFolder(inputFolder,TextfileColl.INPUT);
+
+        System.out.println("Parsing replacement data...");
         readFolder(replFolder, TextfileColl.REPL);
 
         System.out.println("Done reading.");
@@ -83,19 +78,24 @@ public class MultilingFileReader {
     {
         ArrayList<Textfile> textfiles = new ArrayList<>();
         if(rootFolder.isEmpty()){
-            System.out.println("Empty root folder.");
+            System.err.println("\tEmpty root folder: [" + rootFolder + "]");
             return;
         }
 
         // we expect each subfolder to be a language folder
         File rootFileFolder = new File(rootFolder);
-
+        if(!rootFileFolder.exists())
+        {
+            System.err.println("Failed to open folder: [" + rootFolder+"]");
+            return;
+        }
         for(final String lang : rootFileFolder.list())
         {
+
             // parse folder of each language
             String langFolder = toFolderPath(rootFolder + lang);
             if(! new File(langFolder).isDirectory()) {
-                System.out.println("Skipping non-directory:" + langFolder);
+                System.out.println("\tExpecting language folder - skipping non-directory:" + langFolder);
                 continue;
             }
             // add the language to the total
@@ -112,8 +112,11 @@ public class MultilingFileReader {
 
                     Textfile tf = new Textfile(fileContent, lang);
                     tf.setSentences(sentences);
+                    tf.setFilePath(textFilePath);
                     textfiles.add(tf);
                     TextfileColl.AllLanguages.add(lang);
+                    if(Verbosity)
+                        System.out.println("\tDid read file: " + textFilePath);
                 } catch (IOException e) {
                     System.err.printf("Error reading file %s\n",textfile);
                 }

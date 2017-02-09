@@ -3,13 +3,15 @@
 input_texts=
 replacement_texts=
 
-# folder to write to
+# folder to write result files 
 output_folder=
 
 # sentence splitter models 
 sentenceSplitter_model_paths=
 
-# how to split text to sentences: basic / opennlp
+# how to split text to sentences
+# available: basic, opennlp
+# basic mode handles all java locales, opennlp can deal only with english text
 split_mode=basic
 
 # random seed
@@ -20,10 +22,10 @@ random_seed=
 modifiers=
 
 
-#
+
 # Parameters for each method
-# prob : probability of firing
-# pcnt : percentage of files to use on
+# prob : probability of firing. Leaves its input unaltered otherwise.
+# pcnt : percentage of files to use on. Wraps around if # of articles exceeded,
 # modifiers : misc. modifiers for the method.
 
 # modifiers:
@@ -32,11 +34,13 @@ SO_pcnt=
 SO_modifiers=
 
 # modifiers: reuse_art, reuse_sent
+# use reuse_X modifiers to allow sampling with replacement (always on for now, TODO)
 SR_prob=
 SR_pcnt=
 SR_modifiers=
 
 # ME modifiers: keep_first, keep_second, reuse_art, reuse_sent
+# keep_X : retain the first or second half of the text, swap the other
 ME_prob=
 ME_pcnt=
 ME_modifiers=

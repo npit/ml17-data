@@ -1,4 +1,4 @@
-package io.sentsplit;
+package gr.demokritos.iit.datasetgen.io.sentsplit;
 
 /**
  * Created by nik on 2/4/17.
@@ -10,7 +10,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import opennlp.tools.sentdetect.SentenceDetectorME;

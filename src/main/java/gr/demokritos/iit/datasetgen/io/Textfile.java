@@ -1,4 +1,4 @@
-package io;
+package gr.demokritos.iit.datasetgen.io;
 
 import java.util.ArrayList;
 import java.util.List;

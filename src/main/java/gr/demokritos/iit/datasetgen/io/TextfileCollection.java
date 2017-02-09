@@ -1,6 +1,5 @@
-package io;
+package gr.demokritos.iit.datasetgen.io;
 
-import javax.xml.soap.Text;
 import java.util.*;
 
 /**

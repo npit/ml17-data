@@ -1,4 +1,4 @@
-package utils;
+package gr.demokritos.iit.datasetgen.utils;
 
 import java.util.ArrayList;
 

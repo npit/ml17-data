@@ -1,11 +1,10 @@
-package scramble;
+package gr.demokritos.iit.datasetgen.scramble;
 
 
-import io.Textfile;
-import io.TextfileCollection;
-import net.didion.jwnl.data.Verb;
-import utils.Pair;
-import utils.Utils;
+import gr.demokritos.iit.datasetgen.io.Textfile;
+import gr.demokritos.iit.datasetgen.io.TextfileCollection;
+import gr.demokritos.iit.datasetgen.utils.Pair;
+import gr.demokritos.iit.datasetgen.utils.Utils;
 
 
 import java.io.File;

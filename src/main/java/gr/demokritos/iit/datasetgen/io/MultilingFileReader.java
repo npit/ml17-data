@@ -1,9 +1,9 @@
-package io;
+package gr.demokritos.iit.datasetgen.io;
 
-import io.sentsplit.BasicSentenceSplitter;
-import io.sentsplit.ISentenceSplitter;
-import io.sentsplit.OpenNLPSentenceSplitter;
-import utils.Utils;
+import gr.demokritos.iit.datasetgen.io.sentsplit.BasicSentenceSplitter;
+import gr.demokritos.iit.datasetgen.io.sentsplit.ISentenceSplitter;
+import gr.demokritos.iit.datasetgen.io.sentsplit.OpenNLPSentenceSplitter;
+import gr.demokritos.iit.datasetgen.utils.Utils;
 
 import java.io.File;
 import java.io.IOException;
@@ -11,7 +11,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
 
-import static utils.Utils.toFolderPath;
+import static gr.demokritos.iit.datasetgen.utils.Utils.toFolderPath;
 
 /**
  * Created by nik on 2/3/17.

@@ -1,4 +1,4 @@
-package scramble;
+package gr.demokritos.iit.datasetgen.scramble;
 
 import java.util.Calendar;
 import java.util.Properties;

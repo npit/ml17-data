@@ -1,13 +1,11 @@
-package dataset;
+package gr.demokritos.iit.datasetgen;
 
-import io.MultilingFileReader;
-import io.Textfile;
-import io.TextfileCollection;
-import scramble.Scrambler;
+import gr.demokritos.iit.datasetgen.io.MultilingFileReader;
+import gr.demokritos.iit.datasetgen.io.TextfileCollection;
+import gr.demokritos.iit.datasetgen.scramble.Scrambler;
 
 import java.io.*;
 import java.util.Properties;
-import java.util.Set;
 
 /**
  * Created by nik on 2/3/17.

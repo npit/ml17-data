@@ -1,4 +1,4 @@
-package io.sentsplit;
+package gr.demokritos.iit.datasetgen.io.sentsplit;
 
 import java.text.BreakIterator;
 import java.text.DateFormat;

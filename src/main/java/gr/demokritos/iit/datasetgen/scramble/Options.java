@@ -1,6 +1,6 @@
-package scramble;
+package gr.demokritos.iit.datasetgen.scramble;
 
-import utils.Utils;
+import gr.demokritos.iit.datasetgen.utils.Utils;
 
 import java.util.Arrays;
 import java.util.Properties;

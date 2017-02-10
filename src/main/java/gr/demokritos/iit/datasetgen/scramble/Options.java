@@ -26,8 +26,8 @@ class Options
     String MethodName;
     boolean Verbosity;
 
-    int DecisionProb;
-    int Percentage;
+    double DecisionProb;
+    double Percentage;
     String miscValues[];
 
     enum methods
@@ -87,7 +87,7 @@ class Options
     }
 
 
-    void checkProb(int prob)
+    void checkProb(double prob)
     {
         if(prob<0 || prob > 100) throw new NumberFormatException();
     }
@@ -97,12 +97,12 @@ class Options
         try {
             if (raw_field.equals("prob"))
             {
-                DecisionProb =  Integer.parseInt(content);
+                DecisionProb =  Double.parseDouble(content);
                 checkProb(DecisionProb);
             }
             else if (raw_field.equals("pcnt"))
             {
-                Percentage = Integer.parseInt(content);
+                Percentage = Double.parseDouble(content);
                 checkProb(Percentage);
             }
             else System.err.println("Ignoring undefined field: " + field + " for method " + MethodName);

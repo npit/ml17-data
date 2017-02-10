@@ -200,7 +200,7 @@ public class Scrambler {
             Textfile tf = InputTexts.get(tfidx);
             String lang = tf.getLanguage();
             if(Verbosity)
-                System.out.printf("Textfile %d/%d lang %s\n",tfidx,num,lang);
+                System.out.printf("Textfile %d (%d/%d) lang %s\n",tfidx,tfidx - CurrentProcessedIndex, num,lang);
             int numSentences = tf.getSentences().size();
             for(int k=0;k<numSentences;++k) swapLog.add(new Pair<>());
             String [] outSentences = new String[numSentences ];
@@ -305,7 +305,7 @@ public class Scrambler {
             Textfile tf = InputTexts.get(tfidx);
             String lang = tf.getLanguage();
             if(Verbosity)
-                System.out.printf("Textfile %d/%d lang %s\n",tfidx,num,lang);
+                System.out.printf("Textfile %d (%d/%d) lang %s\n",tfidx, tfidx - CurrentProcessedIndex,num,lang);
             String [] outSentences = new String[tf.getSentences().size()];
             int count = 0;
             for(int sidx=0;sidx<tf.getSentences().size();++sidx)
@@ -400,7 +400,7 @@ public class Scrambler {
             String lang = tf.getLanguage();
             Textfile outTextfile = null;
             if(Verbosity)
-                System.out.printf("Textfile %d/%d lang %s ",tfidx,num,lang);
+                System.out.printf("Textfile %d (%d/%d) lang %s ",tfidx,tfidx - CurrentProcessedIndex,num,lang);
             if(Rand.coinToss(optsME.DecisionProb))
             {
                 // do the merge

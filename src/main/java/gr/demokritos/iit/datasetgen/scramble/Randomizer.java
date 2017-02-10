@@ -28,7 +28,7 @@ public class Randomizer {
         }
         R = new Random(seed);
     }
-    int getProb()
+    double getProb()
     {
         return R.nextInt(100);
     }
@@ -36,9 +36,9 @@ public class Randomizer {
     {
         return R.nextInt(lessThan);
     }
-    public boolean coinToss(int probPcnt)
+    public boolean coinToss(double probPcnt)
     {
-        int prob = getProb();
+        double prob = getProb();
         return  prob < probPcnt;
     }
 }

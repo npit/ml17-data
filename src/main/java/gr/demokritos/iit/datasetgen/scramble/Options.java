@@ -2,8 +2,7 @@ package gr.demokritos.iit.datasetgen.scramble;
 
 import gr.demokritos.iit.datasetgen.utils.Utils;
 
-import java.util.Arrays;
-import java.util.Properties;
+import java.util.*;
 
 /**
  * Created by nik on 2/9/17.
@@ -14,12 +13,41 @@ class Options
     {
         for(String s : runs)
         {
+            if(s.contains("+")) {
+                if (compositeMethodOK(s)) continue;
+                else return false;
+            }
             if(methods.contains(s)) continue;
             System.err.println("Unspecified method : " + s); System.err.flush();
             return false;
         }
         return true;
 
+    }
+
+    static boolean compositeMethodOK(String str)
+    {
+        String [] parts = str.split("\\+");
+        Set<String> alreadySeen = new HashSet<>();
+        for(String p : parts)
+        {
+            if(methods.contains(p))
+            {
+                // check for duplicate
+                if( ! alreadySeen.add(p))
+                {
+                    System.err.println("Duplicate method " + p + " in combo :" + str);
+                    System.err.flush();
+                    return false;
+                }
+            }
+            else
+            {
+                System.err.println("Unspecified method " + p + " in combo " + str);
+                return false;
+            }
+        }
+        return true;
     }
 
     Properties Props;
